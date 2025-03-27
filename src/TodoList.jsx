@@ -8,7 +8,7 @@ export default function TodoList() {
 
   // Fetch tasks from MongoDB on component mount
   useEffect(() => {
-    axios.get("http://localhost:5000/api/tasks")
+    axios.get("https://todo-list-backend-fyxe.onrender.com/api/tasks")
       .then((res) => setTasks(res.data))
       .catch((err) => console.error("Error fetching tasks:", err));
   }, []);
@@ -17,7 +17,7 @@ export default function TodoList() {
   const addTask = () => {
     if (input.trim()) {
       const newTask = { text: input, completed: false };
-      axios.post("http://localhost:5000/api/tasks", newTask)
+      axios.post("https://todo-list-backend-fyxe.onrender.com/api/tasks", newTask)
         .then((res) => setTasks([...tasks, res.data]))
         .catch((err) => console.error("Error adding task:", err));
 
@@ -27,7 +27,7 @@ export default function TodoList() {
 
   // Toggle task completion in MongoDB
   const toggleTask = (task) => {
-    axios.put(`http://localhost:5000/api/tasks/${task._id}`, {
+    axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${task._id}`, {
       completed: !task.completed
     })
     .then(() => {
@@ -38,7 +38,7 @@ export default function TodoList() {
 
   // Remove task from MongoDB
   const removeTask = (taskId) => {
-    axios.delete(`http://localhost:5000/api/tasks/${taskId}`)
+    axios.delete(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${taskId}`)
       .then(() => setTasks(tasks.filter((task) => task._id !== taskId)))
       .catch((err) => console.error("Error deleting task:", err));
   };
