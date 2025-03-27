@@ -1,38 +1,46 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./App.css";
 
 export default function TodoList() {
-  const [tasks, setTasks] = useState(() => {
-    const savedTasks = localStorage.getItem("tasks");
-    return savedTasks ? JSON.parse(savedTasks) : [];
-  });
+  const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
 
+  // Fetch tasks from MongoDB on component mount
   useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
+    axios.get("http://localhost:5000/api/tasks")
+      .then((res) => setTasks(res.data))
+      .catch((err) => console.error("Error fetching tasks:", err));
+  }, []);
 
+  // Add task to MongoDB
   const addTask = () => {
     if (input.trim()) {
-      setTasks([...tasks, { text: input, completed: false }]);
+      const newTask = { text: input, completed: false };
+      axios.post("http://localhost:5000/api/tasks", newTask)
+        .then((res) => setTasks([...tasks, res.data]))
+        .catch((err) => console.error("Error adding task:", err));
+
       setInput("");
     }
   };
 
-  const toggleTask = (index) => {
-    setTasks(
-      tasks.map((task, i) =>
-        i === index ? { ...task, completed: !task.completed } : task
-      )
-    );
+  // Toggle task completion in MongoDB
+  const toggleTask = (task) => {
+    axios.put(`http://localhost:5000/api/tasks/${task._id}`, {
+      completed: !task.completed
+    })
+    .then(() => {
+      setTasks(tasks.map((t) => t._id === task._id ? { ...t, completed: !t.completed } : t));
+    })
+    .catch((err) => console.error("Error updating task:", err));
   };
 
-  const removeTask = (index) => {
-    setTasks(tasks.filter((_, i) => i !== index));
-  };
-
-  const removeCompletedTask = (taskToRemove) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.text !== taskToRemove.text));
+  // Remove task from MongoDB
+  const removeTask = (taskId) => {
+    axios.delete(`http://localhost:5000/api/tasks/${taskId}`)
+      .then(() => setTasks(tasks.filter((task) => task._id !== taskId)))
+      .catch((err) => console.error("Error deleting task:", err));
   };
 
   return (
@@ -52,29 +60,24 @@ export default function TodoList() {
           </button>
         </div>
         <div className="task-list">
-          {tasks.filter(task => !task.completed).map((task, index) => (
-            <div key={index} className="task-item">
+          {tasks.filter(task => !task.completed).map((task) => (
+            <div key={task._id} className="task-item">
               <span>{task.text}</span>
-              <button onClick={() => toggleTask(index)} className="check-button">
-                ✔
-              </button>
-              <button onClick={() => removeTask(index)} className="delete-button">
-                ✘
-              </button>
+              <button onClick={() => toggleTask(task)} className="check-button">✔</button>
+              <button onClick={() => removeTask(task._id)} className="delete-button">✘</button>
             </div>
           ))}
         </div>
       </div>
+
       {tasks.some(task => task.completed) && (
         <div className="completed-container">
           <h2 className="title">Completed Tasks</h2>
           <div className="task-list">
-            {tasks.filter(task => task.completed).map((task, index) => (
-              <div key={index} className="task-item completed-item">
+            {tasks.filter(task => task.completed).map((task) => (
+              <div key={task._id} className="task-item completed-item">
                 <span className="completed">{task.text}</span>
-                <button onClick={() => removeCompletedTask(task)} className="delete-button">
-                    ✘
-                </button>
+                <button onClick={() => removeTask(task._id)} className="delete-button">✘</button>
               </div>
             ))}
           </div>
