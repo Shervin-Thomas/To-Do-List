@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./App.css";
 
 export default function TodoList() {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState(() => {
+    const savedTasks = localStorage.getItem("tasks");
+    return savedTasks ? JSON.parse(savedTasks) : [];
+  });
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
   const addTask = () => {
     if (input.trim()) {
@@ -24,8 +31,8 @@ export default function TodoList() {
     setTasks(tasks.filter((_, i) => i !== index));
   };
 
-  const removeCompletedTask = (index) => {
-    setTasks(tasks.filter((task, i) => !(task.completed && i === index)));
+  const removeCompletedTask = (taskToRemove) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.text !== taskToRemove.text));
   };
 
   return (
@@ -65,7 +72,7 @@ export default function TodoList() {
             {tasks.filter(task => task.completed).map((task, index) => (
               <div key={index} className="task-item completed-item">
                 <span className="completed">{task.text}</span>
-                <button onClick={() => removeCompletedTask(index)} className="delete-button">
+                <button onClick={() => removeCompletedTask(task)} className="delete-button">
                     ✘
                 </button>
               </div>
