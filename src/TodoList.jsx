@@ -10,39 +10,56 @@ export default function TodoList() {
 
   // Fetch tasks from MongoDB on component mount
   useEffect(() => {
-    axios.get("https://todo-list-backend-fyxe.onrender.com/api/tasks")
-      .then((res) => setTasks(res.data))
-      .catch((err) => console.error("Error fetching tasks:", err));
+    fetchTasks();
   }, []);
 
-  // Add task to MongoDB
-  const addTask = () => {
-    if (input.trim()) {
-      const newTask = { text: input, completed: false };
-      axios.post("https://todo-list-backend-fyxe.onrender.com/api/tasks", newTask)
-        .then((res) => setTasks([...tasks, res.data]))
-        .catch((err) => console.error("Error adding task:", err));
+  // Fetch all tasks
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get("https://todo-list-backend-fyxe.onrender.com/api/tasks");
+      setTasks(response.data);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
+  };
 
-      setInput("");
+  // Add task to MongoDB
+  const addTask = async () => {
+    if (input.trim()) {
+      try {
+        const response = await axios.post("https://todo-list-backend-fyxe.onrender.com/api/tasks", {
+          text: input,
+          completed: false
+        });
+        setTasks([...tasks, response.data]);
+        setInput("");
+      } catch (error) {
+        console.error("Error adding task:", error);
+      }
     }
   };
 
   // Toggle task completion in MongoDB
-  const toggleTask = (task) => {
-    axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${task._id}`, {
-      completed: !task.completed
-    })
-    .then(() => {
-      setTasks(tasks.map((t) => t._id === task._id ? { ...t, completed: !t.completed } : t));
-    })
-    .catch((err) => console.error("Error updating task:", err));
+  const toggleTask = async (task) => {
+    try {
+      const response = await axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${task._id}`, {
+        text: task.text,
+        completed: !task.completed
+      });
+      setTasks(tasks.map((t) => (t._id === task._id ? response.data : t)));
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
   };
 
   // Remove task from MongoDB
-  const removeTask = (taskId) => {
-    axios.delete(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${taskId}`)
-      .then(() => setTasks(tasks.filter((task) => task._id !== taskId)))
-      .catch((err) => console.error("Error deleting task:", err));
+  const removeTask = async (taskId) => {
+    try {
+      await axios.delete(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${taskId}`);
+      setTasks(tasks.filter((task) => task._id !== taskId));
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   // Start editing a task
@@ -52,20 +69,19 @@ export default function TodoList() {
   };
 
   // Save edited task
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editInput.trim() && editingTask) {
-      axios.put(`http://localhost:5000/api/tasks/${editingTask._id}`, {
-        text: editInput,
-        completed: editingTask.completed
-      })
-      .then(() => {
-        setTasks(tasks.map((t) => 
-          t._id === editingTask._id ? { ...t, text: editInput } : t
-        ));
+      try {
+        const response = await axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${editingTask._id}`, {
+          text: editInput,
+          completed: editingTask.completed
+        });
+        setTasks(tasks.map((t) => (t._id === editingTask._id ? response.data : t)));
         setEditingTask(null);
         setEditInput("");
-      })
-      .catch((err) => console.error("Error updating task:", err));
+      } catch (error) {
+        console.error("Error updating task:", error);
+      }
     }
   };
 
@@ -78,7 +94,11 @@ export default function TodoList() {
   // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
-      addTask();
+      if (editingTask) {
+        saveEdit();
+      } else {
+        addTask();
+      }
     }
   };
 
@@ -107,78 +127,35 @@ export default function TodoList() {
         </div>
 
         <div className="task-list">
-          {tasks.filter(task => !task.completed).map((task) => (
-            <div key={task._id} className="task-item">
-              {editingTask?._id === task._id ? (
-                <>
-                  <input
-                    type="text"
-                    className="edit-input"
-                    value={editInput}
-                    onChange={(e) => setEditInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
-                  />
-                  <div className="button-group">
-                    <button onClick={saveEdit} className="save-button">Save</button>
-                    <button onClick={cancelEdit} className="cancel-button">Cancel</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="task-content">
-                    <button 
-                      onClick={() => toggleTask(task)} 
-                      className={`checkbox ${task.completed ? 'checked' : ''}`}
-                    >
-                      {task.completed && '✓'}
-                    </button>
-                    <span className="task-text">{task.text}</span>
-                  </div>
-                  <div className="button-group">
-                    <button onClick={() => startEditing(task)} className="edit-button" title="Edit task">
-                      <span>✎</span>
-                    </button>
-                    <button onClick={() => removeTask(task._id)} className="delete-button" title="Delete task">
-                      <span>×</span>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {tasks.some(task => task.completed) && (
-        <div className="completed-container">
-          <h2 className="section-title">Completed</h2>
-          <div className="task-list">
-            {tasks.filter(task => task.completed).map((task) => (
-              <div key={task._id} className="task-item completed-item">
+          {tasks
+            .filter(task => !task.completed)
+            .map((task) => (
+              <div key={task._id} className="task-item">
                 {editingTask?._id === task._id ? (
-                  <>
+                  <div className="edit-mode">
                     <input
                       type="text"
                       className="edit-input"
                       value={editInput}
                       onChange={(e) => setEditInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && saveEdit()}
+                      onKeyPress={handleKeyPress}
+                      autoFocus
                     />
                     <div className="button-group">
                       <button onClick={saveEdit} className="save-button">Save</button>
                       <button onClick={cancelEdit} className="cancel-button">Cancel</button>
                     </div>
-                  </>
+                  </div>
                 ) : (
                   <>
                     <div className="task-content">
                       <button 
                         onClick={() => toggleTask(task)} 
-                        className="checkbox checked"
+                        className={`checkbox ${task.completed ? 'checked' : ''}`}
                       >
-                        ✓
+                        {task.completed && '✓'}
                       </button>
-                      <span className="task-text completed">{task.text}</span>
+                      <span className="task-text">{task.text}</span>
                     </div>
                     <div className="button-group">
                       <button onClick={() => startEditing(task)} className="edit-button" title="Edit task">
@@ -192,6 +169,33 @@ export default function TodoList() {
                 )}
               </div>
             ))}
+        </div>
+      </div>
+
+      {tasks.some(task => task.completed) && (
+        <div className="completed-container">
+          <h2 className="section-title">Completed</h2>
+          <div className="task-list">
+            {tasks
+              .filter(task => task.completed)
+              .map((task) => (
+                <div key={task._id} className="task-item completed-item">
+                  <div className="task-content">
+                    <button 
+                      onClick={() => toggleTask(task)} 
+                      className="checkbox checked"
+                    >
+                      ✓
+                    </button>
+                    <span className="task-text completed">{task.text}</span>
+                  </div>
+                  <div className="button-group">
+                    <button onClick={() => removeTask(task._id)} className="delete-button" title="Delete task">
+                      <span>×</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
