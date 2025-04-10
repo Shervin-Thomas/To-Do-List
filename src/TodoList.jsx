@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
 
+const API_URL = "https://todo-list-backend-fyxe.onrender.com";
+// const API_URL = "http://localhost:5000";
+
 export default function TodoList() {
   const [tasks, setTasks] = useState([]);
   const [input, setInput] = useState("");
@@ -16,7 +19,7 @@ export default function TodoList() {
   // Fetch all tasks
   const fetchTasks = async () => {
     try {
-      const response = await axios.get("https://todo-list-backend-fyxe.onrender.com/api/tasks");
+      const response = await axios.get(`${API_URL}/api/tasks`);
       setTasks(response.data);
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -27,8 +30,9 @@ export default function TodoList() {
   const addTask = async () => {
     if (input.trim()) {
       try {
-        const response = await axios.post("https://todo-list-backend-fyxe.onrender.com/api/tasks", {
-          text: input,
+        const response = await axios.post(`${API_URL}/api/tasks`, {
+          title: input,
+          description: input,
           completed: false
         });
         setTasks([...tasks, response.data]);
@@ -42,8 +46,9 @@ export default function TodoList() {
   // Toggle task completion in MongoDB
   const toggleTask = async (task) => {
     try {
-      const response = await axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${task._id}`, {
-        text: task.text,
+      const response = await axios.put(`${API_URL}/api/tasks/${task._id}`, {
+        title: task.title,
+        description: task.description,
         completed: !task.completed
       });
       setTasks(tasks.map((t) => (t._id === task._id ? response.data : t)));
@@ -55,7 +60,7 @@ export default function TodoList() {
   // Remove task from MongoDB
   const removeTask = async (taskId) => {
     try {
-      await axios.delete(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${taskId}`);
+      await axios.delete(`${API_URL}/api/tasks/${taskId}`);
       setTasks(tasks.filter((task) => task._id !== taskId));
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -65,15 +70,16 @@ export default function TodoList() {
   // Start editing a task
   const startEditing = (task) => {
     setEditingTask(task);
-    setEditInput(task.text);
+    setEditInput(task.title);
   };
 
   // Save edited task
   const saveEdit = async () => {
     if (editInput.trim() && editingTask) {
       try {
-        const response = await axios.put(`https://todo-list-backend-fyxe.onrender.com/api/tasks/${editingTask._id}`, {
-          text: editInput,
+        const response = await axios.put(`${API_URL}/api/tasks/${editingTask._id}`, {
+          title: editInput,
+          description: editInput,
           completed: editingTask.completed
         });
         setTasks(tasks.map((t) => (t._id === editingTask._id ? response.data : t)));
@@ -155,7 +161,7 @@ export default function TodoList() {
                       >
                         {task.completed && '✓'}
                       </button>
-                      <span className="task-text">{task.text}</span>
+                      <span className="task-text">{task.title}</span>
                     </div>
                     <div className="button-group">
                       <button onClick={() => startEditing(task)} className="edit-button" title="Edit task">
@@ -187,7 +193,7 @@ export default function TodoList() {
                     >
                       ✓
                     </button>
-                    <span className="task-text completed">{task.text}</span>
+                    <span className="task-text completed">{task.title}</span>
                   </div>
                   <div className="button-group">
                     <button onClick={() => removeTask(task._id)} className="delete-button" title="Delete task">
